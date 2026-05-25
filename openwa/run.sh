@@ -41,11 +41,27 @@ OPENWA_API_KEY="$(read_option openwa_api_key "")"
 
 export NODE_ENV=production
 
-# Ensure the native API uses the configured key instead of generating a random one
+# Ensure the data directory exists and is persistent
+mkdir -p "${OPENWA_DATA_DIR}"
+
+# CRITICAL: Symlink /app/data to the persistent /data/openwa directory.
+# This ensures that session tokens and the generated .env file survive restarts.
+if [ ! -L "/app/data" ]; then
+  mkdir -p /app
+  rm -rf /app/data
+  ln -s "${OPENWA_DATA_DIR}" /app/data
+fi
+
+API_MASTER_KEY="$(read_option api_master_key "")"
+LOG_LEVEL="$(read_option log_level "info")"
+OPENWA_API_KEY="$(read_option openwa_api_key "")"
+
+export NODE_ENV=production
+
+# Ensure the native API uses the configured key
 if [ -n "$OPENWA_API_KEY" ]; then
-  mkdir -p /app/data
-  echo "API_KEY=${OPENWA_API_KEY}" > /app/data/.env.generated
-  echo "API_KEY=${OPENWA_API_KEY}" > /data/.env.generated 2>/dev/null || true
+  # Write to the persistent data directory
+  echo "API_KEY=${OPENWA_API_KEY}" > "${OPENWA_DATA_DIR}/.env.generated"
 fi
 export PORT=2785
 export LOG_LEVEL="${LOG_LEVEL}"
