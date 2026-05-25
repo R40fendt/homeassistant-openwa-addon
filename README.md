@@ -16,7 +16,7 @@ This add-on bundles the [OpenWA](https://github.com/rmyndharis/OpenWA) API with 
 ### 1. Install and Configure
 Install the add-on and enter the following in the **Options** tab:
 - `openwa_api_key`: A secret key for the native API.
-- `api_master_key`: A secret key for the helper API.
+- `api_master_key`: A secret key for the helper API. (Optional: If left blank, a secure random key will be generated and printed in the logs on first boot).
 - `session_id`: (Leave empty for now).
 
 **Restart the add-on** after saving these options.
