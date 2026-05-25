@@ -38,7 +38,7 @@ PY
 API_MASTER_KEY="$(read_option api_master_key "")"
 LOG_LEVEL="$(read_option log_level "info")"
 
-export NODE_ENV=production
+export NODE_ENV=development
 export PORT=2785
 export LOG_LEVEL="${LOG_LEVEL}"
 
