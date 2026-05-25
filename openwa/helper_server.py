@@ -155,14 +155,18 @@ class HelperHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         """Handle GET."""
-        if not self.verify_auth():
-            return
-
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
 
         if path == "/":
             self.handle_index()
+            return
+
+        if path == "/qr":
+            self.handle_qr()
+            return
+
+        if not self.verify_auth():
             return
 
         if path == "/health":
@@ -171,10 +175,6 @@ class HelperHandler(BaseHTTPRequestHandler):
 
         if path == "/sessions":
             self.handle_sessions()
-            return
-
-        if path == "/qr":
-            self.handle_qr()
             return
 
         self.send_json(404, {"error": "not_found"})
