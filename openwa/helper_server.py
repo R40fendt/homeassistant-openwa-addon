@@ -17,8 +17,6 @@ OPTIONS_PATH = Path("/data/options.json")
 OPENWA_BASE_URL = "http://127.0.0.1:2785"
 HELPER_PORT = 2786
 
-MASTER_KEY = os.environ.get("API_MASTER_KEY", "")
-
 
 def load_options() -> dict[str, Any]:
     """Load add-on options."""
@@ -143,11 +141,14 @@ class HelperHandler(BaseHTTPRequestHandler):
 
     def verify_auth(self) -> bool:
         """Verify the request has a valid master API key."""
-        if not MASTER_KEY:
+        options = load_options()
+        master_key = options.get("api_master_key", "")
+
+        if not master_key:
             return True
 
         key = self.headers.get("X-API-Key")
-        if key == MASTER_KEY:
+        if key == master_key:
             return True
 
         self.send_json(401, {"error": "unauthorized", "message": "Invalid or missing X-API-Key header."})

@@ -37,14 +37,16 @@ PY
 
 API_MASTER_KEY="$(read_option api_master_key "")"
 LOG_LEVEL="$(read_option log_level "info")"
+OPENWA_API_KEY="$(read_option openwa_api_key "")"
 
-export API_KEY="owa_static_key_2026_development"
-export NODE_ENV=development
+export NODE_ENV=production
 
-# Force the static API key into the generated config file to prevent random generation
-mkdir -p /app/data
-echo "API_KEY=${API_KEY}" > /app/data/.env.generated
-echo "API_KEY=${API_KEY}" > /data/.env.generated 2>/dev/null || true
+# Ensure the native API uses the configured key instead of generating a random one
+if [ -n "$OPENWA_API_KEY" ]; then
+  mkdir -p /app/data
+  echo "API_KEY=${OPENWA_API_KEY}" > /app/data/.env.generated
+  echo "API_KEY=${OPENWA_API_KEY}" > /data/.env.generated 2>/dev/null || true
+fi
 export PORT=2785
 export LOG_LEVEL="${LOG_LEVEL}"
 
