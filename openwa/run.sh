@@ -38,6 +38,7 @@ PY
 API_MASTER_KEY="$(read_option api_master_key "")"
 LOG_LEVEL="$(read_option log_level "info")"
 
+export API_KEY="owa_static_key_2026_development"
 export NODE_ENV=development
 export PORT=2785
 export LOG_LEVEL="${LOG_LEVEL}"
