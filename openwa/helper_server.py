@@ -154,7 +154,37 @@ class HelperHandler(BaseHTTPRequestHandler):
         self.send_json(401, {"error": "unauthorized", "message": "Invalid or missing X-API-Key header."})
         return False
 
-    def do_GET(self) -> None:
+def start_session_if_needed() -> None:
+    """Automatically start the configured session if it's not running."""
+    options = load_options()
+    api_key = options.get("openwa_api_key", "")
+    session_id = options.get("session_id", "")
+
+    if not api_key:
+        print("[OpenWA Helper] No openwa_api_key configured. Skipping auto-start.")
+        return
+
+    if not session_id:
+        print("[OpenWA Helper] No session_id configured. Please follow the Quick Start Guide to create a session.")
+        return
+
+    try:
+        status, _, body = openwa_request("GET", f"/api/sessions/{session_id}", api_key=api_key)
+        if status == 200:
+            payload = json.loads(body.decode("utf-8"))
+            current_status = payload.get("status")
+            if current_status != "ready":
+                print(f"[OpenWA Helper] Session {session_id} is {current_status}. Sending start request...")
+                openwa_request("POST", f"/api/sessions/{session_id}/start", api_key=api_key)
+                print(f"[OpenWA Helper] Session start request sent.")
+            else:
+                print(f"[OpenWA Helper] Session {session_id} is already ready.")
+        else:
+            print(f"[OpenWA Helper] Session {session_id} not found or error ({status}).")
+    except Exception as e:
+        print(f"[OpenWA Helper] Error during auto-start check: {e}")
+
+class HelperHandler(BaseHTTPRequestHandler):
         """Handle GET."""
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
@@ -467,6 +497,8 @@ class HelperHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     """Run helper server."""
+    start_session_if_needed()
+
     address = ("0.0.0.0", HELPER_PORT)
     server = ThreadingHTTPServer(address, HelperHandler)
     print(f"[OpenWA Helper] Listening on port {HELPER_PORT}")
