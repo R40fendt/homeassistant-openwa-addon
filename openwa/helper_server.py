@@ -18,6 +18,16 @@ OPENWA_BASE_URL = "http://127.0.0.1:2785"
 HELPER_PORT = 2786
 
 
+def load_options() -> dict[str, Any]:
+    """Load add-on options from disk."""
+    try:
+        if OPTIONS_PATH.exists():
+            return json.loads(OPTIONS_PATH.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"[OpenWA Helper] Error loading options: {e}")
+    return {}
+
+
 def save_options(options: dict[str, Any]) -> None:
     """Save add-on options to disk."""
     try:
@@ -54,6 +64,7 @@ def get_master_key() -> str:
 
     print(f"[OpenWA Helper] 🔑 Generated new Master Key: {new_key}")
     return new_key
+
 
 def mask_value(value: str) -> str:
     """Mask sensitive values for display."""
@@ -129,59 +140,6 @@ def openwa_request(
         return 502, {"Content-Type": "application/json"}, json.dumps(payload).encode("utf-8")
 
 
-class HelperHandler(BaseHTTPRequestHandler):
-    """HTTP handler for helper API."""
-
-    server_version = "OpenWAHelper/0.1.0"
-
-    def log_message(self, fmt: str, *args: Any) -> None:
-        """Log requests."""
-        print(f"[OpenWA Helper] {self.address_string()} - {fmt % args}")
-
-    def send_bytes(self, status: int, content_type: str, body: bytes) -> None:
-        """Send bytes response."""
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def send_json(self, status: int, payload: dict[str, Any] | list[Any]) -> None:
-        """Send JSON response."""
-        body = json.dumps(payload, indent=2).encode("utf-8")
-        self.send_bytes(status, "application/json; charset=utf-8", body)
-
-    def read_json_body(self) -> dict[str, Any]:
-        """Read JSON request body."""
-        length = int(self.headers.get("Content-Length", "0"))
-        if length <= 0:
-            return {}
-
-        raw = self.rfile.read(length)
-        try:
-            parsed = json.loads(raw.decode("utf-8"))
-        except Exception:
-            return {}
-
-        if isinstance(parsed, dict):
-            return parsed
-
-        return {}
-
-    def verify_auth(self) -> bool:
-        """Verify the request has a valid master API key."""
-        master_key = get_master_key()
-
-        if not master_key:
-            return True
-
-        key = self.headers.get("X-API-Key")
-        if key == master_key:
-            return True
-
-        self.send_json(401, {"error": "unauthorized", "message": "Invalid or missing X-API-Key header."})
-        return False
-
 def start_session_if_needed() -> None:
     """Automatically create and start the configured session if needed."""
     options = load_options()
@@ -236,8 +194,60 @@ def start_session_if_needed() -> None:
     except Exception as e:
         print(f"[OpenWA Helper] Error during auto-start check: {e}")
 
+
 class HelperHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
+    """HTTP handler for helper API."""
+
+    server_version = "OpenWAHelper/0.1.0"
+
+    def log_message(self, fmt: str, *args: Any) -> None:
+        """Log requests."""
+        print(f"[OpenWA Helper] {self.address_string()} - {fmt % args}")
+
+    def send_bytes(self, status: int, content_type: str, body: bytes) -> None:
+        """Send bytes response."""
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_json(self, status: int, payload: dict[str, Any] | list[Any]) -> None:
+        """Send JSON response."""
+        body = json.dumps(payload, indent=2).encode("utf-8")
+        self.send_bytes(status, "application/json; charset=utf-8", body)
+
+    def read_json_body(self) -> dict[str, Any]:
+        """Read JSON request body."""
+        length = int(self.headers.get("Content-Length", "0"))
+        if length <= 0:
+            return {}
+
+        raw = self.rfile.read(length)
+        try:
+            parsed = json.loads(raw.decode("utf-8"))
+        except Exception:
+            return {}
+
+        if isinstance(parsed, dict):
+            return parsed
+
+        return {}
+
+    def verify_auth(self) -> bool:
+        """Verify the request has a valid master API key."""
+        master_key = get_master_key()
+
+        if not master_key:
+            return True
+
+        key = self.headers.get("X-API-Key")
+        if key == master_key:
+            return True
+
+        self.send_json(401, {"error": "unauthorized", "message": "Invalid or missing X-API-Key header."})
+        return False
+
     def do_GET(self) -> None:
         """Handle GET."""
         parsed = urlparse(self.path)
