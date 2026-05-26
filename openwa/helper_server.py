@@ -237,6 +237,7 @@ def start_session_if_needed() -> None:
         print(f"[OpenWA Helper] Error during auto-start check: {e}")
 
 class HelperHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
         """Handle GET."""
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
