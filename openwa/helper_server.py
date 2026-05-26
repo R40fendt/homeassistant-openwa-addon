@@ -18,12 +18,12 @@ OPENWA_BASE_URL = "http://127.0.0.1:2785"
 HELPER_PORT = 2786
 
 
-def load_options() -> dict[str, Any]:
-    """Load add-on options."""
+def save_options(options: dict[str, Any]) -> None:
+    """Save add-on options to disk."""
     try:
-        return json.loads(OPTIONS_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+        OPTIONS_PATH.write_text(json.dumps(options, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"[OpenWA Helper] Error saving options: {e}")
 
 
 def get_master_key() -> str:
@@ -183,7 +183,7 @@ class HelperHandler(BaseHTTPRequestHandler):
         return False
 
 def start_session_if_needed() -> None:
-    """Automatically start the configured session if it's not running."""
+    """Automatically create and start the configured session if needed."""
     options = load_options()
     api_key = options.get("openwa_api_key", "")
     session_id = options.get("session_id", "")
@@ -192,10 +192,34 @@ def start_session_if_needed() -> None:
         print("[OpenWA Helper] No openwa_api_key configured. Skipping auto-start.")
         return
 
+    # 1. Create session if session_id is missing
     if not session_id:
-        print("[OpenWA Helper] No session_id configured. Please follow the Quick Start Guide to create a session.")
-        return
+        print("[OpenWA Helper] No session_id configured. Creating new session...")
+        try:
+            status, _, body = openwa_request(
+                "POST",
+                "/api/sessions",
+                api_key=api_key,
+                body={"name": "homeassistant"}
+            )
+            if status in (200, 201):
+                payload = json.loads(body.decode("utf-8"))
+                session_id = payload.get("id")
+                if session_id:
+                    print(f"[OpenWA Helper] New session created: {session_id}")
+                    options["session_id"] = session_id
+                    save_options(options)
+                else:
+                    print("[OpenWA Helper] Session created but no ID found in response.")
+                    return
+            else:
+                print(f"[OpenWA Helper] Failed to create session: {status}")
+                return
+        except Exception as e:
+            print(f"[OpenWA Helper] Error during session creation: {e}")
+            return
 
+    # 2. Start the session if it's not ready
     try:
         status, _, body = openwa_request("GET", f"/api/sessions/{session_id}", api_key=api_key)
         if status == 200:

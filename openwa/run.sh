@@ -70,16 +70,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  🟢 OpenWA Home Assistant Add-on"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 if [ -n "$OPENWA_API_KEY" ]; then
-  echo "  Quick Start Guide:"
-  echo "  1. Create Session: "
-  echo "     curl -X POST -H \"X-API-Key: ${OPENWA_API_KEY}\" -H \"Content-Type: application/json\" -d '{\"name\": \"homeassistant\"}' http://localhost:2785/api/sessions"
-  echo ""
-  echo "  2. Start Session (replace [ID] with the ID from step 1):"
-  echo "     curl -X POST -H \"X-API-Key: ${OPENWA_API_KEY}\" http://localhost:2785/api/sessions/[ID]/start"
-  echo ""
-  echo "  3. Scan QR Code: http://localhost:2786/qr"
-  echo ""
-  echo "  4. Update add-on options with the new Session ID."
+  echo "  💡 Automated Setup:"
+  echo "  The add-on will automatically manage your session."
+  echo "  If this is your first time, please scan the QR code at:"
+  echo "  http://homeassistant.local:2786/qr"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 fi
 

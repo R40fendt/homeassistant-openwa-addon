@@ -17,35 +17,17 @@ This add-on bundles the [OpenWA](https://github.com/rmyndharis/OpenWA) API with 
 Install the add-on and enter the following in the **Options** tab:
 - `openwa_api_key`: A secret key for the native API.
 - `api_master_key`: A secret key for the helper API. (Optional: If left blank, a secure random key will be generated and printed in the logs on first boot).
-- `session_id`: (Leave empty for now).
+- `session_id`: (Optional: The add-on will automatically create a session if this is left blank).
 
 **Restart the add-on** after saving these options.
 
-### 2. One-Time Session Setup
-Since this is a new installation, you must create and link your WhatsApp account. 
+### 2. One-Time QR Linkage
+If this is your first time using the add-on:
+1. Wait for the add-on to start.
+2. Visit the QR page: 👉 `http://homeassistant.local:2786/qr`
+3. Scan the code using **WhatsApp $\rightarrow$ Linked Devices $\rightarrow$ Link a Device**.
 
-**Step A: Create a Session**
-Run this command from your terminal (replace `[YOUR_API_KEY]` and `[YOUR_IP]`):
-```bash
-curl -X POST -H "X-API-Key: [YOUR_API_KEY]" -H "Content-Type: application/json" -d '{"name": "homeassistant"}' http://[YOUR_IP]:2785/api/sessions
-```
-**Copy the `id` from the JSON response.**
-
-**Step B: Start the Session**
-Replace `[SESSION_ID]` with the ID from the previous step:
-```bash
-curl -X POST -H "X-API-Key: [YOUR_API_KEY]" http://[YOUR_IP]:2785/api/sessions/[SESSION_ID]/start
-```
-
-**Step C: Link your Phone**
-Visit the QR page in your browser:
-👉 `http://[YOUR_IP]:2786/qr`
-Scan the code using **WhatsApp $\rightarrow$ Linked Devices $\rightarrow$ Link a Device**.
-
-**Step D: Finalize Configuration**
-1. Copy the **Session ID** you created in Step A.
-2. Paste it into the `session_id` field in the add-on **Options**.
-3. **Restart the add-on**.
+The add-on handles all the technical session creation and starting in the background. Once you scan the QR code, you are connected!
 
 ---
 
