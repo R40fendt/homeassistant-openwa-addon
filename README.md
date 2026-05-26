@@ -1,3 +1,14 @@
+# OpenWA Home Assistant Add-on
+
+A secure, persistent wrapper for the OpenWA WhatsApp API gateway, specifically designed for Home Assistant.
+
+## Overview
+
+This add-on bundles the [OpenWA](https://github.com/rmyndharis/OpenWA) API with a dedicated helper server that provides simplified endpoints for Home Assistant `rest_command` integrations and a web-based status UI.
+
+- **Native OpenWA API (Port 2785)**: Full access to the WhatsApp gateway.
+- **Helper Server (Port 2786)**: Simplified API for sending messages and a status dashboard.
+
 ## Companion Home Assistant Integration
 
 This add-on is designed to work with the companion HACS integration:
