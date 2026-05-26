@@ -6,6 +6,7 @@ from __future__ import annotations
 import html
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -140,8 +141,29 @@ def openwa_request(
         return 502, {"Content-Type": "application/json"}, json.dumps(payload).encode("utf-8")
 
 
+def wait_for_openwa(timeout: int = 60) -> bool:
+    """Wait for the OpenWA API to become healthy."""
+    print(f"[OpenWA Helper] Waiting for OpenWA API to boot up (timeout: {timeout}s)...")
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            status, _, _ = openwa_request("GET", "/api/health")
+            if status == 200:
+                print("[OpenWA Helper] OpenWA API is healthy!")
+                return True
+        except Exception:
+            pass
+        time.sleep(2)
+    print("[OpenWA Helper] Timeout waiting for OpenWA API.")
+    return False
+
+
 def start_session_if_needed() -> None:
     """Automatically create and start the configured session if needed."""
+    # Wait for OpenWA to be ready before doing anything
+    if not wait_for_openwa():
+        print("[OpenWA Helper] Warning: OpenWA API not healthy. Session auto-start may fail.")
+
     options = load_options()
     api_key = options.get("openwa_api_key", "")
     session_id = options.get("session_id", "")
@@ -455,12 +477,22 @@ class HelperHandler(BaseHTTPRequestHandler):
         api_key = options.get("openwa_api_key", "")
         session_id = options.get("session_id", "")
 
-        if not api_key or not session_id:
+        if not api_key:
             self.send_json(
                 503,
                 {
-                    "error": "missing_configuration",
-                    "message": "Set openwa_api_key and session_id in the add-on options.",
+                    "error": "missing_api_key",
+                    "message": "Set openwa_api_key in the add-on options.",
+                },
+            )
+            return
+
+        if not session_id:
+            self.send_json(
+                503,
+                {
+                    "error": "missing_session_id",
+                    "message": "Set session_id in the add-on options, or restart the add-on to let it auto-generate one.",
                 },
             )
             return
