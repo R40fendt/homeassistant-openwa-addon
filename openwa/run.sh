@@ -42,40 +42,22 @@ SESSION_ID="$(read_option session_id "")"
 
 export NODE_ENV=production
 
-# Ensure the data directory exists and is persistent
 mkdir -p "${OPENWA_DATA_DIR}"
 
-# CRITICAL: Symlink /app/data to the persistent /data/openwa directory.
-# This ensures that session tokens and the generated .env file survive restarts.
+# Persist OpenWA data across add-on restarts.
 if [ ! -L "/app/data" ]; then
   mkdir -p /app
   rm -rf /app/data
   ln -s "${OPENWA_DATA_DIR}" /app/data
 fi
 
-# The options are already read above.
-
-export NODE_ENV=production
-
-# Ensure the native API uses the configured key
+# Ensure the native API uses the configured key.
 if [ -n "$OPENWA_API_KEY" ]; then
-  # Write to the persistent data directory
   echo "API_KEY=${OPENWA_API_KEY}" > "${OPENWA_DATA_DIR}/.env.generated"
 fi
+
 export PORT=2785
 export LOG_LEVEL="${LOG_LEVEL}"
-
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  🟢 OpenWA Home Assistant Add-on"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-if [ -n "$OPENWA_API_KEY" ]; then
-  echo "  💡 Automated Setup:"
-  echo "  The add-on will automatically manage your session."
-  echo "  🔑 Session ID: ${SESSION_ID:-"None (will be generated)"}"
-  echo "  If this is your first time, please scan the QR code at:"
-  echo "  http://homeassistant.local:2786/qr"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-fi
 
 export DATABASE_TYPE=sqlite
 export DATABASE_NAME="${OPENWA_DATA_DIR}/openwa.sqlite"
@@ -103,40 +85,112 @@ export PLUGINS_DIR="${OPENWA_DATA_DIR}/plugins"
 
 export API_MASTER_KEY="${API_MASTER_KEY}"
 
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  🟢 OpenWA Home Assistant Add-on"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+if [ -n "$OPENWA_API_KEY" ]; then
+  echo "  💡 Automated Setup:"
+  echo "  The add-on will automatically manage your session."
+  echo "  🔑 Session ID: ${SESSION_ID:-None (will be generated)}"
+  echo "  If this is your first time, please scan the QR code at:"
+  echo "  http://homeassistant.local:2786/qr"
+else
+  echo "  ⚠️  openwa_api_key is not configured."
+  echo "  Set openwa_api_key in the add-on options before using QR/session features."
+fi
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+cleanup() {
+  echo "[OpenWA Add-on] Stopping services..."
+
+  if [ -n "${HELPER_PID:-}" ]; then
+    kill "${HELPER_PID}" 2>/dev/null || true
+  fi
+
+  if [ -n "${OPENWA_PID:-}" ]; then
+    kill "${OPENWA_PID}" 2>/dev/null || true
+  fi
+}
+
+trap cleanup EXIT INT TERM
+
+start_openwa() {
+  cd /app 2>/dev/null || true
+
+  if [ -f "/app/dist/main.js" ]; then
+    node /app/dist/main.js &
+    OPENWA_PID="$!"
+    return 0
+  fi
+
+  if [ -f "/app/dist/src/main.js" ]; then
+    node /app/dist/src/main.js &
+    OPENWA_PID="$!"
+    return 0
+  fi
+
+  if [ -f "dist/main.js" ]; then
+    node dist/main.js &
+    OPENWA_PID="$!"
+    return 0
+  fi
+
+  if [ -f "dist/src/main.js" ]; then
+    node dist/src/main.js &
+    OPENWA_PID="$!"
+    return 0
+  fi
+
+  if command -v npm >/dev/null 2>&1; then
+    npm run start:prod &
+    OPENWA_PID="$!"
+    return 0
+  fi
+
+  echo "[OpenWA Add-on] Could not find OpenWA start command."
+  return 1
+}
+
+wait_for_openwa() {
+  local timeout="${1:-90}"
+  local elapsed=0
+
+  echo "[OpenWA Add-on] Waiting for OpenWA API on port 2785..."
+
+  while [ "$elapsed" -lt "$timeout" ]; do
+    if curl -fsS "http://127.0.0.1:2785/api/health" >/dev/null 2>&1; then
+      echo "[OpenWA Add-on] OpenWA API is healthy."
+      return 0
+    fi
+
+    if ! kill -0 "${OPENWA_PID}" 2>/dev/null; then
+      echo "[OpenWA Add-on] OpenWA process exited before becoming healthy."
+      return 1
+    fi
+
+    sleep 2
+    elapsed=$((elapsed + 2))
+  done
+
+  echo "[OpenWA Add-on] Timed out waiting for OpenWA API."
+  return 1
+}
+
 echo "[OpenWA Add-on] Starting OpenWA API on port 2785..."
 echo "[OpenWA Add-on] Data directory: ${OPENWA_DATA_DIR}"
 
-cd /app 2>/dev/null || true
+start_openwa
 
-if [ -f "/app/dist/main.js" ]; then
-  node /app/dist/main.js &
-  OPENWA_PID=$!
-elif [ -f "/app/dist/src/main.js" ]; then
-  node /app/dist/src/main.js &
-  OPENWA_PID=$!
-elif [ -f "dist/main.js" ]; then
-  node dist/main.js &
-  OPENWA_PID=$!
-elif [ -f "dist/src/main.js" ]; then
-  node dist/src/main.js &
-  OPENWA_PID=$!
-elif command -v npm >/dev/null 2>&1; then
-  npm run start:prod &
-  OPENWA_PID=$!
-else
-  echo "[OpenWA Add-on] Could not find OpenWA start command."
+wait_for_openwa 90 || {
+  echo "[OpenWA Add-on] OpenWA did not become healthy. Check logs above."
+  wait "${OPENWA_PID}" || true
   exit 1
-fi
+}
 
 echo "[OpenWA Add-on] Starting helper server on port 2786..."
 python3 /usr/local/bin/helper_server.py &
 HELPER_PID="$!"
 
-cleanup() {
-  echo "[OpenWA Add-on] Stopping helper server..."
-  kill "${HELPER_PID}" 2>/dev/null || true
-  echo "[OpenWA Add-on] Stopping OpenWA API..."
-  kill "${OPENWA_PID}" 2>/dev/null || true
-}
-
-trap cleanup EXIT
+wait -n "${OPENWA_PID}" "${HELPER_PID}"
