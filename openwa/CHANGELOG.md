@@ -1,0 +1,19 @@
+# Changelog
+
+## 0.2.0
+
+- Promoted the OpenWA Home Assistant add-on to version 0.2.0.
+- Added recommended pairing with the OpenWA WhatsApp HACS integration 0.2.0.
+- Fixed OpenWA startup order so the native API starts before the helper server.
+- Added OpenWA health checks before helper session setup.
+- Improved automatic session creation and startup handling.
+- Added QR setup flow guidance for first-time WhatsApp linking.
+- Documented companion HACS integration setup using the native OpenWA API on port 2785.
+- Improved troubleshooting guidance for QR, session ID, and persistence issues.
+
+## 0.1.0
+
+- Initial Home Assistant add-on release.
+- Added native OpenWA API exposure on port 2785.
+- Added helper API and status UI on port 2786.
+- Added configurable `openwa_api_key`, `api_master_key`, `session_id`, log level, and recipient aliases.
