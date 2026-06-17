@@ -5,6 +5,7 @@ description: Self-hosted OpenWA WhatsApp API gateway with Home Assistant helper 
 url: https://github.com/nomi25home/homeassistant-openwa-addon
 arch:
   - amd64
+  - arm64
 
 startup: application
 boot: auto
